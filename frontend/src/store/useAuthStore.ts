@@ -5,13 +5,19 @@ import { useToast } from 'vue-toastification';
 import { AxiosError } from 'axios';
 import { ErrorData } from '../types/http';
 import router from '../router';
+import { UserProps } from '../types/User';
+import { io, Socket } from 'socket.io-client';
+
+const BASE_URL = 'http://localhost:5001';
 
 export const useAuthStore = defineStore('auth', {
     state: () => ({
-        authUser: null as null | Record<string, any>,
+        authUser: null as null | UserProps,
         isSigningUp: false as boolean,
         isLogginIng: false as boolean,
         isUpdatingProfile: false as boolean,
+        onlineUsers: [] as string[],
+        socket: null as null | Socket,
 
         isCheckingAuth: true as boolean,
     }),
@@ -24,6 +30,8 @@ export const useAuthStore = defineStore('auth', {
             try {
                 const res = await http.get('/auth/check'); // 发送请求
                 this.authUser = res.data;
+
+                this.connectSocket()
             } catch (error) {
                 console.error('Authentication check failed:', error);
                 this.authUser = null; // 如果失败，重置 authUser
@@ -38,6 +46,9 @@ export const useAuthStore = defineStore('auth', {
                 const res = await http.post("/auth/signup", data)
                 this.authUser = res.data
                 toast.success("Account created successfully")
+                this.connectSocket()
+                // 注册成功后，跳转到首页
+                router.push("/")
             } catch (error) {
                 // 断言 error 为 ErrorData
                 const axiosError = error as ErrorData;
@@ -53,8 +64,9 @@ export const useAuthStore = defineStore('auth', {
                 await http.post("/auth/logout")
                 this.authUser = null
                 toast.success("Logged out successfully")
-                // 登录成功 跳转到首页
-                router.push("/")
+                this.disconnectSocket()
+                // 退出登录后，跳转到登录页面
+                router.push("/login")
             } catch (error) {
                 // 断言 error 为 ErrorData
                 const axiosError = error as ErrorData;
@@ -70,6 +82,9 @@ export const useAuthStore = defineStore('auth', {
                 const res = await http.post("/auth/login", data)
                 this.authUser = res.data
                 toast.success("Logged in successfully")
+                this.connectSocket()
+                // 登录成功后，跳转到首页
+                router.push("/")
             } catch (error) {
                 const axiosError = error as ErrorData;
                 toast.error(axiosError.response!.data.message);
@@ -91,6 +106,25 @@ export const useAuthStore = defineStore('auth', {
             } finally {
                 this.isUpdatingProfile = false
             }
-        }
+        },
+        connectSocket() {
+            if (!this.authUser || this.socket?.connected) return
+            this.socket = io(BASE_URL, {
+                query: {
+                    userId: this.authUser._id
+                }
+            })
+            this.socket.connect()
+
+            this.socket.on('getOnlineUsers', (userIds: string[]) => {
+                this.onlineUsers = userIds
+            })
+        },
+        disconnectSocket() {
+            if (this.socket?.connected) {
+                this.socket.disconnect()
+                this.socket = null
+            }
+        },
     },
 });

@@ -4,7 +4,7 @@
             <div class="bg-base-100 rounded-lg shadow-cl w-full max-w-6xl h-[calc(100vh-8rem)]">
                 <div class="flex h-full rounded-lg overflow-hidden">
                     <Sidebar />
-                    <NochatSelected v-if="selectedUser" />
+                    <NochatSelected v-if="!selectedUser" />
                     <ChatContainer v-else />
                 </div>
             </div>

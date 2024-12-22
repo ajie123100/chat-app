@@ -12,3 +12,12 @@ export interface LoginProps {
 export interface UpdateProfileProps {
     profilePic: string | ArrayBuffer | null
 }
+
+export interface UserProps {
+    _id: string;
+    fullName: string;
+    email: string;
+    profilePic: string;
+    createdAt: string;
+    updatedAt: string;
+}
